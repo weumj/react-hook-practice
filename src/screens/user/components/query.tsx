@@ -33,6 +33,16 @@ function useSafeSetSate<T = any>(initState: T): [T, (arg: Partial<T>) => void] {
   return [state, safeSetState];
 }
 
+function usePrevious<T = any>(value: T) {
+  const ref = useRef(value);
+
+  useEffect(() => {
+    ref.current = value;
+  });
+
+  return ref.current;
+}
+
 interface States {
   loaded: boolean;
   fetching: boolean;
@@ -50,7 +60,7 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
   } as States);
 
   useEffect(() => {
-    if (isEqual(prevInputRef.current, [query, variables])) {
+    if (isEqual(prevInputs, [query, variables])) {
       return;
     }
     setState({ fetching: true });
@@ -74,10 +84,7 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
       );
   });
 
-  const prevInputRef = useRef([query, variables]);
-  useEffect(() => {
-    prevInputRef.current = [query, variables];
-  });
+  const prevInputs = usePrevious([query, variables]);
 
   return children(state);
 }
