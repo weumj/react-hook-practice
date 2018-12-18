@@ -10,14 +10,17 @@ interface OwnProps {
 }
 type Props = OwnProps;
 
-function Query({ query, variables, children, normalize = data => data }: Props) {
-  const client = useContext(GitHub.Context);
-  const [state, setState] = useReducer((state, newState) => ({ ...state, ...newState }), {
-    loaded: false,
-    fetching: false,
-    data: null,
-    error: null as Error | null,
-  });
+function useSetState<T = any>(initState: T): [T, (arg: Partial<T>) => void] {
+  const [state, setState] = useReducer(
+    (state, newState: Partial<T>) => ({ ...state, ...newState }),
+    initState,
+  );
+
+  return [state, setState];
+}
+
+function useSafeSetSate<T = any>(initState: T): [T, (arg: Partial<T>) => void] {
+  const [state, setState] = useSetState(initState);
 
   const mountedRef = useRef(false);
   useEffect(() => {
@@ -25,17 +28,36 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
     return () => (mountedRef.current = false);
   }, []);
 
-  const safeSetState = (arg: Partial<typeof state>) => mountedRef.current && setState(arg);
+  const safeSetState = (arg: Partial<T>) => mountedRef.current && setState(arg);
+
+  return [state, safeSetState];
+}
+
+interface States {
+  loaded: boolean;
+  fetching: boolean;
+  data: object | null;
+  error: Error | null;
+}
+
+function Query({ query, variables, children, normalize = data => data }: Props) {
+  const client = useContext(GitHub.Context);
+  const [state, setState] = useSafeSetSate({
+    loaded: false,
+    fetching: false,
+    data: null,
+    error: null,
+  } as States);
 
   useEffect(() => {
     if (isEqual(prevInputRef.current, [query, variables])) {
       return;
     }
-    safeSetState({ fetching: true });
+    setState({ fetching: true });
     client
       .request(query, variables)
       .then((res: any) =>
-        safeSetState({
+        setState({
           data: normalize(res),
           error: null,
           loaded: true,
@@ -43,7 +65,7 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
         }),
       )
       .catch((error: Error) =>
-        safeSetState({
+        setState({
           error,
           data: null,
           loaded: false,
