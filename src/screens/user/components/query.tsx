@@ -1,6 +1,6 @@
-import React, { useContext, useReducer, useEffect, useRef, EffectCallback } from 'react';
+import React, { useContext } from 'react';
 import * as GitHub from '../../../github-client';
-import isEqual from 'lodash/isEqual';
+import { useDeepCompareEffect, useSafeSetSate } from '../../../util/hooks';
 
 interface OwnProps {
   query: string;
@@ -9,53 +9,6 @@ interface OwnProps {
   children: (d: any) => any;
 }
 type Props = OwnProps;
-
-function useSetState<T = any>(initState: T): [T, (arg: Partial<T>) => void] {
-  const [state, setState] = useReducer(
-    (state, newState: Partial<T>) => ({ ...state, ...newState }),
-    initState,
-  );
-
-  return [state, setState];
-}
-
-function useSafeSetSate<T = any>(initState: T): [T, (arg: Partial<T>) => void] {
-  const [state, setState] = useSetState(initState);
-
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => (mountedRef.current = false);
-  }, []);
-
-  const safeSetState = (arg: Partial<T>) => mountedRef.current && setState(arg);
-
-  return [state, safeSetState];
-}
-
-function usePrevious<T = any>(value: T) {
-  const ref = useRef(value);
-
-  useEffect(() => {
-    ref.current = value;
-  });
-
-  return ref.current;
-}
-
-function useDeepCompareEffect<T extends any[]>(callback: EffectCallback, inputs: T) {
-  const cleanupRef = useRef((() => {}) as ReturnType<EffectCallback>);
-
-  useEffect(() => {
-    if (!isEqual(prevInputs, inputs)) {
-      cleanupRef.current = callback();
-    }
-
-    return cleanupRef.current;
-  });
-
-  const prevInputs = usePrevious(inputs);
-}
 
 interface States {
   loaded: boolean;
