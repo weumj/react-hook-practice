@@ -16,18 +16,26 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
     loaded: false,
     fetching: false,
     data: null,
-    error: null,
+    error: null as Error | null,
   });
 
+  const mountedRef = useRef(false);
   useEffect(() => {
-    if (isEqual(prevInput.current, [query, variables])) {
+    mountedRef.current = true;
+    return () => (mountedRef.current = false);
+  }, []);
+
+  const safeSetState = (arg: Partial<typeof state>) => mountedRef.current && setState(arg);
+
+  useEffect(() => {
+    if (isEqual(prevInputRef.current, [query, variables])) {
       return;
     }
-    setState({ fetching: true });
+    safeSetState({ fetching: true });
     client
       .request(query, variables)
       .then((res: any) =>
-        setState({
+        safeSetState({
           data: normalize(res),
           error: null,
           loaded: true,
@@ -35,7 +43,7 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
         }),
       )
       .catch((error: Error) =>
-        setState({
+        safeSetState({
           error,
           data: null,
           loaded: false,
@@ -44,9 +52,9 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
       );
   });
 
-  const prevInput = useRef([query, variables]);
+  const prevInputRef = useRef([query, variables]);
   useEffect(() => {
-    prevInput.current = [query, variables];
+    prevInputRef.current = [query, variables];
   });
 
   return children(state);
