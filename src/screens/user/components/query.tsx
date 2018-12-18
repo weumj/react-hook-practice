@@ -1,5 +1,6 @@
-import React, { useContext, useReducer, useEffect } from 'react';
+import React, { useContext, useReducer, useEffect, useRef } from 'react';
 import * as GitHub from '../../../github-client';
+import isEqual from 'lodash/isEqual';
 
 interface OwnProps {
   query: string;
@@ -18,30 +19,35 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
     error: null,
   });
 
-  useEffect(
-    () => {
-      setState({ fetching: true });
-      client
-        .request(query, variables)
-        .then((res: any) =>
-          setState({
-            data: normalize(res),
-            error: null,
-            loaded: true,
-            fetching: false,
-          }),
-        )
-        .catch((error: Error) =>
-          setState({
-            error,
-            data: null,
-            loaded: false,
-            fetching: false,
-          }),
-        );
-    },
-    [query, variables],
-  );
+  useEffect(() => {
+    if (isEqual(prevInput.current, [query, variables])) {
+      return;
+    }
+    setState({ fetching: true });
+    client
+      .request(query, variables)
+      .then((res: any) =>
+        setState({
+          data: normalize(res),
+          error: null,
+          loaded: true,
+          fetching: false,
+        }),
+      )
+      .catch((error: Error) =>
+        setState({
+          error,
+          data: null,
+          loaded: false,
+          fetching: false,
+        }),
+      );
+  });
+
+  const prevInput = useRef([query, variables]);
+  useEffect(() => {
+    prevInput.current = [query, variables];
+  });
 
   return children(state);
 }
