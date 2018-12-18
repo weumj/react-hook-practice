@@ -1,23 +1,26 @@
 import React, { useContext } from 'react';
 import * as GitHub from '../../../github-client';
 import { useDeepCompareEffect, useSafeSetSate } from '../../../util/hooks';
+import { User } from './profile';
 
 interface OwnProps {
   query: string;
   variables: object;
   normalize: (d: any) => any;
-  children: (d: any) => any;
 }
 type Props = OwnProps;
 
 interface States {
   loaded: boolean;
   fetching: boolean;
-  data: object | null;
+  data: User | null;
   error: Error | null;
 }
 
-function Query({ query, variables, children, normalize = data => data }: Props) {
+const Query = ({ children, ...props }: Props & { children: (d: any) => any }) =>
+  children(useQuery(props));
+
+export function useQuery({ query, variables, normalize = data => data }: Props) {
   const client = useContext(GitHub.Context);
   const [state, setState] = useSafeSetSate({
     loaded: false,
@@ -51,7 +54,7 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
     [query, variables],
   );
 
-  return children(state);
+  return state;
 }
 
 export default Query;
