@@ -1,4 +1,4 @@
-import React, { useContext, useReducer, useEffect, useRef } from 'react';
+import React, { useContext, useReducer, useEffect, useRef, EffectCallback } from 'react';
 import * as GitHub from '../../../github-client';
 import isEqual from 'lodash/isEqual';
 
@@ -43,6 +43,20 @@ function usePrevious<T = any>(value: T) {
   return ref.current;
 }
 
+function useDeepCompareEffect<T extends any[]>(callback: EffectCallback, inputs: T) {
+  const cleanupRef = useRef((() => {}) as ReturnType<EffectCallback>);
+
+  useEffect(() => {
+    if (!isEqual(prevInputs, inputs)) {
+      cleanupRef.current = callback();
+    }
+
+    return cleanupRef.current;
+  });
+
+  const prevInputs = usePrevious(inputs);
+}
+
 interface States {
   loaded: boolean;
   fetching: boolean;
@@ -59,32 +73,30 @@ function Query({ query, variables, children, normalize = data => data }: Props) 
     error: null,
   } as States);
 
-  useEffect(() => {
-    if (isEqual(prevInputs, [query, variables])) {
-      return;
-    }
-    setState({ fetching: true });
-    client
-      .request(query, variables)
-      .then((res: any) =>
-        setState({
-          data: normalize(res),
-          error: null,
-          loaded: true,
-          fetching: false,
-        }),
-      )
-      .catch((error: Error) =>
-        setState({
-          error,
-          data: null,
-          loaded: false,
-          fetching: false,
-        }),
-      );
-  });
-
-  const prevInputs = usePrevious([query, variables]);
+  useDeepCompareEffect(
+    () => {
+      setState({ fetching: true });
+      client
+        .request(query, variables)
+        .then((res: any) =>
+          setState({
+            data: normalize(res),
+            error: null,
+            loaded: true,
+            fetching: false,
+          }),
+        )
+        .catch((error: Error) =>
+          setState({
+            error,
+            data: null,
+            loaded: false,
+            fetching: false,
+          }),
+        );
+    },
+    [query, variables],
+  );
 
   return children(state);
 }
