@@ -1,6 +1,4 @@
-import { Component } from 'react';
-import PropTypes from 'prop-types';
-import isEqual from 'lodash/isEqual';
+import React, { useContext, useReducer, useEffect } from 'react';
 import * as GitHub from '../../../github-client';
 
 interface OwnProps {
@@ -11,73 +9,41 @@ interface OwnProps {
 }
 type Props = OwnProps;
 
-interface States {}
+function Query({ query, variables, children, normalize = data => data }: Props) {
+  const client = useContext(GitHub.Context);
+  const [state, setState] = useReducer((state, newState) => ({ ...state, ...newState }), {
+    loaded: false,
+    fetching: false,
+    data: null,
+    error: null,
+  });
 
-interface Contexts {}
+  useEffect(
+    () => {
+      setState({ fetching: true });
+      client
+        .request(query, variables)
+        .then((res: any) =>
+          setState({
+            data: normalize(res),
+            error: null,
+            loaded: true,
+            fetching: false,
+          }),
+        )
+        .catch((error: Error) =>
+          setState({
+            error,
+            data: null,
+            loaded: false,
+            fetching: false,
+          }),
+        );
+    },
+    [query, variables],
+  );
 
-class Query extends Component<Props, States, Contexts> {
-  static propTypes = {
-    query: PropTypes.string.isRequired,
-    variables: PropTypes.object,
-    children: PropTypes.func.isRequired,
-    normalize: PropTypes.func,
-  };
-  static defaultProps = {
-    normalize: (data: any) => data,
-  };
-  static contextType = GitHub.Context;
-
-  state = { loaded: false, fetching: false, data: null, error: null };
-  private isMounted = false;
-
-  componentDidMount() {
-    this.isMounted = true;
-    this.query();
-  }
-
-  componentDidUpdate(prevProps: Props) {
-    if (
-      !isEqual(this.props.query, prevProps.query) ||
-      !isEqual(this.props.variables, prevProps.variables)
-    ) {
-      this.query();
-    }
-  }
-
-  componentWillUnmount() {
-    this.isMounted = false;
-  }
-
-  query() {
-    this.setState({ fetching: true });
-    const client = this.context;
-    client
-      .request(this.props.query, this.props.variables)
-      .then((res: any) =>
-        this.safeSetState({
-          data: this.props.normalize(res),
-          error: null,
-          loaded: true,
-          fetching: false,
-        }),
-      )
-      .catch((error: Error) =>
-        this.safeSetState({
-          error,
-          data: null,
-          loaded: false,
-          fetching: false,
-        }),
-      );
-  }
-
-  safeSetState(...args: any[]) {
-    this.isMounted && this.setState.apply(this, args as any);
-  }
-
-  render() {
-    return this.props.children(this.state);
-  }
+  return children(state);
 }
 
 export default Query;
