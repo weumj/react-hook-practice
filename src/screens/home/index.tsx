@@ -1,7 +1,7 @@
 /* @jsx jsx */
 import { jsx } from '@emotion/core';
 
-import { SyntheticEvent } from 'react';
+import { SyntheticEvent, useEffect } from 'react';
 import { navigate } from '@reach/router';
 import { Input, PrimaryButton, IsolatedContainer } from '../../shared/pattern';
 
@@ -16,6 +16,9 @@ function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
 }
 
 function Home() {
+  useEffect(() => {
+    import('../user');
+  }, []);
   return (
     <IsolatedContainer>
       <form
@@ -54,9 +57,3 @@ function Home() {
 }
 
 export default Home;
-
-/*
-eslint
-no-unused-vars: ["warn", {"varsIgnorePattern": "(jsx)"}]
-react/react-in-jsx-scope: "off"
-*/
