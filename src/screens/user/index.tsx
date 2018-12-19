@@ -107,7 +107,7 @@ function normalizeUserData(data: any) {
 }
 
 interface OwnProps {
-  username: string;
+  username?: string;
 }
 export type Props = OwnProps;
 

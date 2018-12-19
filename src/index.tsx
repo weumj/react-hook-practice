@@ -3,29 +3,15 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { Router, RouteComponentProps } from '@reach/router';
 import ErrorBoundary, { FallbackProps } from 'react-error-boundary';
-import loadable, { LoadingComponentProps, OptionsWithoutRender } from 'react-loadable';
 import ThemeProvider from './shared/theme-provider';
 import { IsolatedContainer, LoadingMessagePage } from './shared/pattern';
 import * as GitHubContext from './github-client';
 import { Props as UserProps } from './screens/user';
 
-function LoadingFallback({ error, pastDelay }: LoadingComponentProps) {
-  if (error) {
-    // our ErrorBoundary will catch this
-    throw error;
-  }
-  return <LoadingMessagePage>Loading Application</LoadingMessagePage>;
-}
-
-const Home = loadable<RouteComponentProps, any>({
-  loader: () => import('./screens/home'),
-  loading: LoadingFallback,
-});
-
-const User = loadable({
-  loader: () => import('./screens/user'),
-  loading: LoadingFallback,
-} as OptionsWithoutRender<RouteComponentProps<UserProps>>);
+const Home = React.lazy<React.ComponentType<RouteComponentProps>>(() => import('./screens/home'));
+const User = React.lazy<React.ComponentType<RouteComponentProps<UserProps>>>(() =>
+  import('./screens/user'),
+);
 
 function ErrorFallback({ error }: FallbackProps) {
   return (
@@ -41,10 +27,12 @@ function App() {
     <ThemeProvider>
       <GitHubContext.Provider>
         <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <Router>
-            <Home path="/" />
-            <User path="/:username" />
-          </Router>
+          <React.Suspense fallback={<LoadingMessagePage>Loading Application</LoadingMessagePage>}>
+            <Router>
+              <Home path="/" />
+              <User path="/:username" />
+            </Router>
+          </React.Suspense>
         </ErrorBoundary>
       </GitHubContext.Provider>
     </ThemeProvider>
